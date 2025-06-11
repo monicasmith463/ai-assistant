@@ -3,6 +3,7 @@ from typing import Annotated, Any
 from fastapi import Depends, HTTPException, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from ..core.ai.ai_service import AIService
 from ..core.config import settings
 from ..core.db.database import async_get_db
 from ..core.exceptions.http_exceptions import ForbiddenException, RateLimitException, UnauthorizedException
@@ -99,3 +100,22 @@ async def rate_limiter(
     is_limited = await is_rate_limited(db=db, user_id=user_id, path=path, limit=limit, period=period)
     if is_limited:
         raise RateLimitException("Rate limit exceeded.")
+
+
+def get_ai_service() -> AIService:
+    """Get AI service instance.
+
+    Returns:
+        AIService: Singleton instance of the AI service
+
+    Raises:
+        InternalServerException: If AI service cannot be initialized
+    """
+    try:
+        return AIService()
+    except Exception as e:
+        logger.error(f"Failed to initialize AI service: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail="AI service is currently unavailable"
+        )
