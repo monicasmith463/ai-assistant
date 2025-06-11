@@ -106,6 +106,14 @@ class EnvironmentSettings(BaseSettings):
     ENVIRONMENT: EnvironmentOption = config("ENVIRONMENT", default="local")
 
 
+class AISettings(BaseSettings):
+    OPENAI_API_KEY: str = config("OPENAI_API_KEY", default="")
+    OPENAI_MODEL: str = config("OPENAI_MODEL", default="gpt-3.5-turbo")
+    MAX_TOKENS: int = config("MAX_TOKENS", default=1000)
+    TEMPERATURE: float = config("TEMPERATURE", default=0.7)
+    AI_TIMEOUT: int = config("AI_TIMEOUT", default=30)
+
+
 class Settings(
     AppSettings,
     PostgresSettings,
@@ -118,6 +126,7 @@ class Settings(
     RedisRateLimiterSettings,
     DefaultRateLimitSettings,
     EnvironmentSettings,
+    AISettings,
 ):
     pass
 

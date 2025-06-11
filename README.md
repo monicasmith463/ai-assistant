@@ -62,6 +62,9 @@
 - ⎘ Out of the box offset and cursor pagination support with <a href="https://github.com/igorbenav/fastcrud">fastcrud</a>
 - 🛑 Rate Limiter dependency
 - 👮 FastAPI docs behind authentication and hidden based on the environment
+- 🤖 **AI Code Assistant with OpenAI integration**
+- 🧠 **Code generation, explanation, and review endpoints**
+- 📝 **Smart caching for AI responses**
 - 🦾 Easily extendable
 - 🤸‍♂️ Flexible
 - 🚚 Easy running with docker compose
@@ -100,9 +103,15 @@
    1. [ARQ Job Queues](#510-arq-job-queues)
    1. [Rate Limiting](#511-rate-limiting)
    1. [JWT Authentication](#512-jwt-authentication)
-   1. [Running](#513-running)
-   1. [Create Application](#514-create-application)
-   2. [Opting Out of Services](#515-opting-out-of-services)
+   1. [AI Code Assistant](#513-ai-code-assistant)
+      1. [Setup and Configuration](#5131-setup-and-configuration)
+      1. [Available Endpoints](#5132-available-endpoints)
+      1. [Usage Examples](#5133-usage-examples)
+      1. [Rate Limits and Caching](#5134-rate-limits-and-caching)
+      1. [Error Handling](#5135-error-handling)
+   1. [Running](#514-running)
+   1. [Create Application](#515-create-application)
+   2. [Opting Out of Services](#516-opting-out-of-services)
 1. [Running in Production](#6-running-in-production)
    1. [Uvicorn Workers with Gunicorn](#61-uvicorn-workers-with-gunicorn)
    1. [Running With NGINX](#62-running-with-nginx)
@@ -265,6 +274,17 @@ REDIS_RATE_LIMIT_PORT=6379          # default=6379, if using docker compose you 
 # ------------- default rate limit settings -------------
 DEFAULT_RATE_LIMIT_LIMIT=10         # default=10
 DEFAULT_RATE_LIMIT_PERIOD=3600      # default=3600
+```
+
+For AI functionality (OpenAI integration):
+
+```
+# ------------- AI service -------------
+OPENAI_API_KEY="sk-your-openai-api-key-here"  # Get from https://platform.openai.com/api-keys
+OPENAI_MODEL="gpt-3.5-turbo"                  # Options: gpt-3.5-turbo, gpt-4, gpt-4-turbo-preview
+MAX_TOKENS=1000                                # Maximum tokens per AI request
+TEMPERATURE=0.7                                # Creativity level (0.0-2.0)
+AI_TIMEOUT=30                                  # Request timeout in seconds
 ```
 
 And Finally the environment:
@@ -572,7 +592,8 @@ First, you may want to take a look at the project structure and understand what 
     │   │       ├── rate_limits.py    # API routes for rate limiting functionalities.
     │   │       ├── tasks.py          # API routes for task management.
     │   │       ├── tiers.py          # API routes for user tier functionalities.
-    │   │       └── users.py          # API routes for user management.
+    │   │       ├── users.py          # API routes for user management.
+    │   │       └── ai.py             # API routes for AI code assistant functionality.
     │   │
     │   ├── core                      # Core utilities and configurations for the application.
     │   │   ├── __init__.py
@@ -599,6 +620,12 @@ First, you may want to take a look at the project structure and understand what 
     │   │   │   ├── cache.py          # Cache-related utilities.
     │   │   │   ├── queue.py          # Utilities for task queue management.
     │   │   │   └── rate_limit.py     # Rate limiting utilities.
+    │   │   │
+    │   │   ├── ai                    # AI service modules for code assistance.
+    │   │   │   ├── __init__.py
+    │   │   │   ├── ai_service.py     # Main AI service orchestrating AI operations.
+    │   │   │   ├── llm_client.py     # OpenAI client wrapper with error handling.
+    │   │   │   └── prompt_templates.py # Templates for AI prompts and responses.
     │   │   │
     │   │   └── worker                # Worker script for background tasks.
     │   │       ├── __init__.py
@@ -633,7 +660,8 @@ First, you may want to take a look at the project structure and understand what 
     │       ├── post.py               # Schema for post data.
     │       ├── rate_limit.py         # Schema for rate limiting data.
     │       ├── tier.py               # Schema for user tier data.
-    │       └── user.py               # Schema for user data.
+    │       ├── user.py               # Schema for user data.
+    │       └── ai.py                 # Schema for AI service requests and responses.
     │
     ├── migrations                    # Alembic migration scripts for database changes.
     │   ├── README
@@ -1500,7 +1528,330 @@ What you should do with the client is:
 
 This authentication setup in the provides a robust, secure, and user-friendly way to handle user sessions in your API applications.
 
-### 5.13 Running
+### 5.13 AI Code Assistant
+
+The FastAPI boilerplate includes a comprehensive AI Code Assistant powered by OpenAI's GPT models. This feature provides intelligent code generation, explanation, and review capabilities through well-designed API endpoints.
+
+#### 5.13.1 Setup and Configuration
+
+##### Prerequisites
+
+1. **OpenAI API Key**: Sign up at [OpenAI Platform](https://platform.openai.com/) and create an API key
+2. **Redis**: Required for caching AI responses (reduces costs and improves performance)
+3. **Environment Variables**: Configure AI settings in your `.env` file
+
+##### Environment Configuration
+
+Add the following variables to your `.env` file:
+
+```bash
+# AI Service Configuration
+OPENAI_API_KEY="sk-your-openai-api-key-here"
+OPENAI_MODEL="gpt-3.5-turbo"  # or gpt-4, gpt-4-turbo-preview
+MAX_TOKENS=1000
+TEMPERATURE=0.7
+AI_TIMEOUT=30
+```
+
+**Model Options:**
+- `gpt-3.5-turbo`: Fast, cost-effective, good for most tasks
+- `gpt-4`: More capable, higher cost, better for complex tasks  
+- `gpt-4-turbo-preview`: Latest model with improved performance
+
+##### Dependencies
+
+The AI functionality requires these Python packages (already included in `pyproject.toml`):
+- `openai`: Official OpenAI Python client
+- `tiktoken`: Token counting for cost estimation
+
+#### 5.13.2 Available Endpoints
+
+The AI Code Assistant provides five main endpoints:
+
+##### 1. Code Generation (`POST /api/v1/ai/generate-code`)
+
+Generate code from natural language descriptions.
+
+**Request Body:**
+```json
+{
+  "description": "Create a Python function that calculates factorial",
+  "language": "Python",
+  "framework": "FastAPI", 
+  "additional_requirements": "Include error handling and type hints"
+}
+```
+
+**Response:**
+```json
+{
+  "generated_code": "def factorial(n: int) -> int:\n    if n < 0:\n        raise ValueError('Factorial not defined for negative numbers')\n    if n <= 1:\n        return 1\n    return n * factorial(n - 1)",
+  "language": "Python",
+  "framework": "FastAPI",
+  "description": "Create a Python function that calculates factorial",
+  "metadata": {
+    "input_tokens": 45,
+    "output_tokens": 32,
+    "total_tokens": 77,
+    "model": "gpt-3.5-turbo"
+  }
+}
+```
+
+##### 2. Code Explanation (`POST /api/v1/ai/explain-code`)
+
+Get detailed explanations of existing code.
+
+**Request Body:**
+```json
+{
+  "code": "def factorial(n):\n    if n <= 1:\n        return 1\n    return n * factorial(n - 1)",
+  "focus_areas": "recursion and base case",
+  "target_audience": "beginner"
+}
+```
+
+**Response:**
+```json
+{
+  "explanation": "This function calculates the factorial of a number using recursion. The base case (n <= 1) stops the recursion and returns 1. For any other number, it multiplies n by the factorial of (n-1), creating a recursive call chain until it reaches the base case.",
+  "original_code": "def factorial(n):\n    if n <= 1:\n        return 1\n    return n * factorial(n - 1)",
+  "focus_areas": "recursion and base case",
+  "target_audience": "beginner",
+  "metadata": {
+    "input_tokens": 65,
+    "output_tokens": 150,
+    "total_tokens": 215,
+    "model": "gpt-3.5-turbo"
+  }
+}
+```
+
+##### 3. Code Review (`POST /api/v1/ai/review-code`)
+
+Get comprehensive code reviews with suggestions for improvement.
+
+**Request Body:**
+```json
+{
+  "code": "def process_data(data):\n    result = []\n    for item in data:\n        result.append(item * 2)\n    return result",
+  "review_type": "performance",
+  "specific_concerns": "efficiency and memory usage"
+}
+```
+
+**Response:**
+```json
+{
+  "review": "The code can be improved for performance:\n\n1. Use list comprehension instead of append() in a loop\n2. Consider using generator expressions for large datasets\n\nImproved version:\n```python\ndef process_data(data):\n    return [item * 2 for item in data]\n```\n\nThis is more Pythonic and typically 2-3x faster.",
+  "original_code": "def process_data(data):\n    result = []\n    for item in data:\n        result.append(item * 2)\n    return result",
+  "review_type": "performance",
+  "specific_concerns": "efficiency and memory usage",
+  "metadata": {
+    "input_tokens": 85,
+    "output_tokens": 200,
+    "total_tokens": 285,
+    "model": "gpt-3.5-turbo"
+  }
+}
+```
+
+##### 4. Health Check (`GET /api/v1/ai/health`)
+
+Check the status and configuration of the AI service.
+
+**Response:**
+```json
+{
+  "status": "healthy",
+  "service": "OpenAI",
+  "model": "gpt-3.5-turbo",
+  "max_tokens": 1000,
+  "temperature": 0.7,
+  "timeout": 30
+}
+```
+
+##### 5. Context Information (`GET /api/v1/ai/context`)
+
+Get detailed information about the AI service configuration.
+
+**Response:**
+```json
+{
+  "model": "gpt-3.5-turbo",
+  "max_tokens": 1000,
+  "temperature": 0.7,
+  "timeout": 30,
+  "available_operations": ["generate_code", "explain_code", "review_code"]
+}
+```
+
+#### 5.13.3 Usage Examples
+
+##### Using curl
+
+```bash
+# Generate code
+curl -X POST "http://localhost:8000/api/v1/ai/generate-code" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "description": "Create a REST API endpoint for user registration",
+    "language": "Python",
+    "framework": "FastAPI"
+  }'
+
+# Explain code
+curl -X POST "http://localhost:8000/api/v1/ai/explain-code" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "code": "async def get_user(db: Session, user_id: int):\n    return db.query(User).filter(User.id == user_id).first()",
+    "target_audience": "intermediate"
+  }'
+
+# Review code
+curl -X POST "http://localhost:8000/api/v1/ai/review-code" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "code": "password = input(\"Enter password: \")\nif password == \"admin\":\n    print(\"Access granted\")",
+    "review_type": "security"
+  }'
+```
+
+##### Using Python requests
+
+```python
+import requests
+
+# Setup
+base_url = "http://localhost:8000/api/v1/ai"
+headers = {
+    "Authorization": "Bearer YOUR_JWT_TOKEN",
+    "Content-Type": "application/json"
+}
+
+# Generate code
+response = requests.post(
+    f"{base_url}/generate-code",
+    headers=headers,
+    json={
+        "description": "Create a function to validate email addresses",
+        "language": "Python",
+        "additional_requirements": "Use regex and return boolean"
+    }
+)
+print(response.json()["generated_code"])
+
+# Explain code
+response = requests.post(
+    f"{base_url}/explain-code", 
+    headers=headers,
+    json={
+        "code": "lambda x: x**2 if x > 0 else 0",
+        "target_audience": "beginner"
+    }
+)
+print(response.json()["explanation"])
+```
+
+#### 5.13.4 Rate Limits and Caching
+
+##### Rate Limits
+
+Each AI endpoint has specific rate limits to manage costs and prevent abuse:
+
+- **Code Generation**: 10 requests per hour per user
+- **Code Explanation**: 20 requests per hour per user  
+- **Code Review**: 15 requests per hour per user
+- **Health Check**: 100 requests per hour per user
+- **Context Info**: 50 requests per hour per user
+
+Rate limits are enforced per authenticated user and can be customized through the tier system.
+
+##### Intelligent Caching
+
+To reduce costs and improve performance, AI responses are cached in Redis:
+
+- **Code Explanations**: Cached for 1 hour (based on code hash + parameters)
+- **Code Reviews**: Cached for 30 minutes (based on code hash + review type)
+- **Health Checks**: Cached for 5 minutes
+- **Context Info**: Cached for 10 minutes
+
+Cache keys are generated using MD5 hashes of the input content, ensuring identical requests return cached results.
+
+#### 5.13.5 Error Handling
+
+The AI service includes comprehensive error handling:
+
+##### Rate Limit Errors (429)
+```json
+{
+  "detail": "AI service rate limit exceeded. Please try again later."
+}
+```
+
+##### Timeout Errors (408)
+```json
+{
+  "detail": "AI service request timed out. Please try again."
+}
+```
+
+##### Service Unavailable (500)
+```json
+{
+  "detail": "Failed to generate code. Please try again later."
+}
+```
+
+##### Authentication Required (401)
+```json
+{
+  "detail": "Not authenticated"
+}
+```
+
+##### Validation Errors (422)
+```json
+{
+  "detail": [
+    {
+      "loc": ["body", "description"],
+      "msg": "ensure this value has at least 10 characters",
+      "type": "value_error.any_str.min_length"
+    }
+  ]
+}
+```
+
+##### Graceful Degradation
+
+- **Cache Failures**: Service continues to work even if Redis is unavailable
+- **OpenAI Outages**: Health check returns unhealthy status but doesn't crash the service
+- **Network Issues**: Automatic retry logic for transient failures
+- **Token Limits**: Clear error messages when approaching token limits
+
+##### Monitoring and Logging
+
+All AI operations are logged with:
+- User ID and request details
+- Token usage and costs
+- Response times and success/failure rates
+- Cache hit/miss ratios
+- Error details and stack traces
+
+Example log entries:
+```
+INFO: User 123 requested code generation for: Create a Python function...
+INFO: Code generation completed for user 123 (tokens: 85, time: 2.3s)
+WARNING: Cache miss for code explanation (hash: a1b2c3d4...)
+ERROR: OpenAI API call failed for user 456: rate limit exceeded
+```
+
+### 5.14 Running
 
 If you are using docker compose, just running the following command should ensure everything is working:
 
