@@ -1,6 +1,6 @@
-<h1 align="center"> Fast FastAPI boilerplate</h1>
+<h1 align="center"> AI Study Assistant</h1>
 <p align="center" markdown=1>
-  <i>Yet another template to speed your FastAPI development up.</i>
+  <i>An AI-powered study assistant that processes documents and generates practice questions.</i>
 </p>
 
 <p align="center">
@@ -35,7 +35,7 @@
 
 ## 0. About
 
-**FastAPI boilerplate** creates an extendable async API using FastAPI, Pydantic V2, SQLAlchemy 2.0 and PostgreSQL:
+**AI Study Assistant** is an AI-powered application that helps students create practice tests from their study materials. Built on a robust FastAPI foundation with modern Python technologies:
 
 - [`FastAPI`](https://fastapi.tiangolo.com): modern Python web framework for building APIs
 - [`Pydantic V2`](https://docs.pydantic.dev/2.4/): the most widely used data Python validation library, rewritten in Rust [`(5x-50x faster)`](https://docs.pydantic.dev/latest/blog/pydantic-v2-alpha/)
@@ -43,28 +43,42 @@
 - [`PostgreSQL`](https://www.postgresql.org): The World's Most Advanced Open Source Relational Database
 - [`Redis`](https://redis.io): Open source, in-memory data store used by millions as a cache, message broker and more.
 - [`ARQ`](https://arq-docs.helpmanual.io) Job queues and RPC in python with asyncio and redis.
+- [`OpenAI API`](https://openai.com/api/) AI-powered question generation and explanations.
+- [`LangChain`](https://langchain.com/) Framework for developing applications with language models.
+- [`PyPDF2`](https://pypdf2.readthedocs.io/) PDF text extraction library.
+- [`python-pptx`](https://python-pptx.readthedocs.io/) PowerPoint document processing.
+- [`python-docx`](https://python-docx.readthedocs.io/) Word document processing.
 - [`Docker Compose`](https://docs.docker.com/compose/) With a single command, create and start all the services from your configuration.
 - [`NGINX`](https://nginx.org/en/) High-performance low resource consumption web server used for Reverse Proxy and Load Balancing.
 
 > \[!TIP\] 
 > If you want the `SQLModel` version instead, head to [SQLModel-boilerplate](https://github.com/igorbenav/SQLModel-boilerplate).
 
-## 1. Features
+## 1. AI Study Assistant Features
 
-- ⚡️ Fully async
+### 🎓 Core Study Features
+- 📄 **Document Processing**: Upload and extract text from PDF, PPTX, and DOCX files
+- 🤖 **AI Question Generation**: Generate practice questions using OpenAI GPT models
+- 📝 **Multiple Question Types**: Support for multiple choice, short answer, and true/false questions
+- 🎯 **Difficulty Levels**: Easy, medium, and hard question generation
+- 💡 **AI Explanations**: Detailed explanations for each question and answer
+- 📊 **Study Sessions**: Track performance and progress over time
+- 🔄 **Smart Caching**: Redis-based caching to reduce AI API costs
+
+### 🏗️ Technical Features
+- ⚡️ Fully async architecture
 - 🚀 Pydantic V2 and SQLAlchemy 2.0
 - 🔐 User authentication with JWT
 - 🍪 Cookie based refresh token
-- 🏬 Easy redis caching
-- 👜 Easy client-side caching
-- 🚦 ARQ integration for task queue
-- ⚙️ Efficient and robust queries with <a href="https://github.com/igorbenav/fastcrud">fastcrud</a>
-- ⎘ Out of the box offset and cursor pagination support with <a href="https://github.com/igorbenav/fastcrud">fastcrud</a>
-- 🛑 Rate Limiter dependency
-- 👮 FastAPI docs behind authentication and hidden based on the environment
-- 🦾 Easily extendable
-- 🤸‍♂️ Flexible
-- 🚚 Easy running with docker compose
+- 🏬 Redis caching for AI responses
+- 👜 Client-side caching
+- 🚦 ARQ integration for background document processing
+- ⚙️ Efficient queries with <a href="https://github.com/igorbenav/fastcrud">fastcrud</a>
+- ⎘ Pagination support for documents and questions
+- 🛑 Rate limiting for AI endpoints
+- 👮 FastAPI docs behind authentication
+- 🦾 Easily extendable for new AI features
+- 🚚 Docker compose deployment
 - ⚖️ NGINX Reverse Proxy and Load Balancing
 
 ## 2. Contents
@@ -85,15 +99,19 @@
       1. [Running the API](#424-running-the-api)
    1. [Creating the first superuser](#43-creating-the-first-superuser)
    1. [Database Migrations](#44-database-migrations)
-1. [Extending](#5-extending)
-   1. [Project Structure](#51-project-structure)
-   1. [Database Model](#52-database-model)
-   1. [SQLAlchemy Models](#53-sqlalchemy-models)
-   1. [Pydantic Schemas](#54-pydantic-schemas)
-   1. [Alembic Migrations](#55-alembic-migrations)
-   1. [CRUD](#56-crud)
-   1. [Routes](#57-routes)
-      1. [Paginated Responses](#571-paginated-responses)
+1. [AI Study Assistant API](#5-ai-study-assistant-api)
+   1. [Document Management](#51-document-management)
+   1. [Question Generation](#52-question-generation)
+   1. [Study Sessions](#53-study-sessions)
+1. [Extending](#6-extending)
+   1. [Project Structure](#61-project-structure)
+   1. [Database Model](#62-database-model)
+   1. [SQLAlchemy Models](#63-sqlalchemy-models)
+   1. [Pydantic Schemas](#64-pydantic-schemas)
+   1. [Alembic Migrations](#65-alembic-migrations)
+   1. [CRUD](#66-crud)
+   1. [Routes](#67-routes)
+      1. [Paginated Responses](#671-paginated-responses)
       1. [HTTP Exceptions](#572-http-exceptions)
    1. [Caching](#58-caching)
    1. [More Advanced Caching](#59-more-advanced-caching)
@@ -266,6 +284,20 @@ REDIS_RATE_LIMIT_PORT=6379          # default=6379, if using docker compose you 
 DEFAULT_RATE_LIMIT_LIMIT=10         # default=10
 DEFAULT_RATE_LIMIT_PERIOD=3600      # default=3600
 ```
+
+For AI functionality, you'll need to configure OpenAI and document processing:
+
+```
+# ------------- AI settings -------------
+OPENAI_API_KEY="your_openai_api_key"        # Get from https://platform.openai.com/api-keys
+OPENAI_MODEL="gpt-3.5-turbo"                # default="gpt-3.5-turbo", can use "gpt-4" for better quality
+MAX_TOKENS=1000                             # default=1000, maximum tokens for AI responses
+DOCUMENT_STORAGE_PATH="./uploads"           # default="./uploads", path for uploaded documents
+MAX_FILE_SIZE_MB=10                         # default=10, maximum file size for uploads
+```
+
+> \[!IMPORTANT\]
+> You must obtain an OpenAI API key from [OpenAI Platform](https://platform.openai.com/api-keys) to use the AI features. The application will not start without a valid API key.
 
 And Finally the environment:
 
@@ -528,9 +560,135 @@ poetry run alembic upgrade head
 > [!NOTE]
 > If you do not have poetry, you may run it without poetry after running `pip install alembic`
 
-## 5. Extending
+## 5. AI Study Assistant API
 
-### 5.1 Project Structure
+The AI Study Assistant provides RESTful API endpoints for document processing, question generation, and study session management. All endpoints require authentication via JWT tokens.
+
+### 5.1 Document Management
+
+#### Upload Document
+```http
+POST /api/v1/documents/upload
+Content-Type: multipart/form-data
+Authorization: Bearer <access_token>
+
+file: <document_file>  # PDF, PPTX, or DOCX file
+```
+
+**Response:**
+```json
+{
+  "id": 1,
+  "title": "Study Material.pdf",
+  "filename": "study_material.pdf",
+  "file_type": "pdf",
+  "file_size": 1024000,
+  "uuid": "123e4567-e89b-12d3-a456-426614174000",
+  "created_at": "2025-06-11T21:54:16Z",
+  "user_id": 1
+}
+```
+
+#### Get User Documents
+```http
+GET /api/v1/documents/
+Authorization: Bearer <access_token>
+```
+
+#### Get Specific Document
+```http
+GET /api/v1/documents/{document_id}
+Authorization: Bearer <access_token>
+```
+
+#### Delete Document
+```http
+DELETE /api/v1/documents/{document_id}
+Authorization: Bearer <access_token>
+```
+
+### 5.2 Question Generation
+
+#### Generate Questions from Document
+```http
+POST /api/v1/questions/generate/{document_id}?num_questions=5&difficulty=medium
+Authorization: Bearer <access_token>
+```
+
+**Parameters:**
+- `num_questions` (optional): Number of questions to generate (default: 5)
+- `difficulty` (optional): Question difficulty - "easy", "medium", or "hard" (default: "medium")
+
+**Response:**
+```json
+[
+  {
+    "id": 1,
+    "question_text": "What is the main concept discussed in the document?",
+    "question_type": "multiple_choice",
+    "correct_answer": "Option A",
+    "options": "[\"Option A\", \"Option B\", \"Option C\", \"Option D\"]",
+    "explanation": "The document primarily focuses on...",
+    "difficulty": "medium",
+    "uuid": "123e4567-e89b-12d3-a456-426614174001",
+    "document_id": 1,
+    "user_id": 1
+  }
+]
+```
+
+#### Get Questions for Document
+```http
+GET /api/v1/questions/document/{document_id}
+Authorization: Bearer <access_token>
+```
+
+### 5.3 Study Sessions
+
+#### Create Study Session
+```http
+POST /api/v1/study-sessions/
+Authorization: Bearer <access_token>
+Content-Type: application/json
+
+{
+  "session_name": "Chapter 1 Practice Test",
+  "document_id": 1,
+  "total_questions": 5
+}
+```
+
+#### Get User Study Sessions
+```http
+GET /api/v1/study-sessions/
+Authorization: Bearer <access_token>
+```
+
+#### Update Study Session with Results
+```http
+PUT /api/v1/study-sessions/{session_id}
+Authorization: Bearer <access_token>
+Content-Type: application/json
+
+{
+  "correct_answers": 4,
+  "score_percentage": 80.0,
+  "time_spent_minutes": 15,
+  "answers": "{\"1\": \"Option A\", \"2\": \"Option B\"}"
+}
+```
+
+**Features:**
+- 🔒 **Authentication Required**: All endpoints require valid JWT tokens
+- 🚦 **Rate Limited**: AI endpoints are rate-limited to prevent abuse
+- 📄 **File Validation**: Supports PDF, PPTX, and DOCX files up to 10MB
+- 🤖 **AI-Powered**: Uses OpenAI GPT models for intelligent question generation
+- 💾 **Caching**: AI responses are cached to reduce API costs
+- 📊 **Progress Tracking**: Study sessions track performance over time
+
+## 6. Extending
+
+### 6.1 Project Structure
 
 First, you may want to take a look at the project structure and understand what each file is doing.
 
