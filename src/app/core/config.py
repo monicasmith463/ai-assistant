@@ -96,6 +96,15 @@ class DefaultRateLimitSettings(BaseSettings):
     DEFAULT_RATE_LIMIT_PERIOD: int = config("DEFAULT_RATE_LIMIT_PERIOD", default=3600)
 
 
+class AISettings(BaseSettings):
+    OPENAI_API_KEY: str = config("OPENAI_API_KEY")
+    OPENAI_MODEL: str = config("OPENAI_MODEL", default="gpt-3.5-turbo")
+    MAX_TOKENS: int = config("MAX_TOKENS", default=1000)
+    DOCUMENT_STORAGE_PATH: str = config("DOCUMENT_STORAGE_PATH", default="./uploads")
+    MAX_FILE_SIZE_MB: int = config("MAX_FILE_SIZE_MB", default=10)
+    ALLOWED_FILE_TYPES: list[str] = ["pdf", "pptx", "docx"]
+
+
 class EnvironmentOption(Enum):
     LOCAL = "local"
     STAGING = "staging"
@@ -117,6 +126,7 @@ class Settings(
     RedisQueueSettings,
     RedisRateLimiterSettings,
     DefaultRateLimitSettings,
+    AISettings,
     EnvironmentSettings,
 ):
     pass

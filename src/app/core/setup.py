@@ -13,6 +13,8 @@ from fastapi.openapi.utils import get_openapi
 
 from ..api.dependencies import get_current_superuser
 from ..middleware.client_cache_middleware import ClientCacheMiddleware
+from ..models import *
+from ..services.file_upload import FileUploadService
 from .config import (
     AppSettings,
     ClientSideCacheSettings,
@@ -24,14 +26,20 @@ from .config import (
     RedisRateLimiterSettings,
     settings,
 )
-from .db.database import Base, async_engine as engine
+from .db.database import Base
+from .db.database import async_engine as engine
 from .utils import cache, queue, rate_limit
-from ..models import *
+
 
 # -------------- database --------------
 async def create_tables() -> None:
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+
+
+# -------------- file storage --------------
+async def ensure_upload_directory() -> None:
+    FileUploadService.ensure_upload_directory()
 
 
 # -------------- cache --------------
@@ -89,6 +97,9 @@ def lifespan_factory(
 
         if isinstance(settings, DatabaseSettings) and create_tables_on_start:
             await create_tables()
+
+        # Ensure upload directory exists
+        await ensure_upload_directory()
 
         if isinstance(settings, RedisCacheSettings):
             await create_redis_cache_pool()

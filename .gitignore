@@ -165,3 +165,7 @@ cython_debug/
 .DS_Store
 
 .ruff_cache
+
+# Uploaded files (but keep directory structure)
+uploads/*
+!uploads/.gitkeep

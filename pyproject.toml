@@ -1,7 +1,7 @@
 [tool.poetry]
-name = "fastapi-boilerplate"
+name = "ai-study-assistant"
 version = "0.1.0"
-description = "A fully Async FastAPI boilerplate using SQLAlchemy and Pydantic 2"
+description = "An AI-powered study assistant that processes documents and generates practice questions"
 authors = ["Igor Magalhaes <igor.magalhaes.r@gmail.com>"]
 license = "MIT"
 readme = "README.md"
@@ -34,6 +34,14 @@ fastcrud = "^0.12.0"
 faker = "^26.0.0"
 psycopg2-binary = "^2.9.9"
 pytest-mock = "^3.14.0"
+# AI & Document Processing
+openai = "^1.12.0"
+langchain = "^0.1.6"
+tiktoken = "^0.5.2"
+PyPDF2 = "^3.0.1"
+python-pptx = "^0.6.23"
+python-docx = "^1.1.0"
+aiofiles = "^23.2.0"
 
 
 [build-system]
