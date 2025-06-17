@@ -28,3 +28,22 @@ def test_upload_file_success(db: Session, client: TestClient, mocker) -> None:
     assert "key" in data
     assert "url" in data
     assert data["url"] == "https://mocked-s3-url.com/test.pdf"
+
+def skip_test_upload_file_success_real_s3(db: Session, client: TestClient, mocker) -> None:
+    user = generators.create_user(db)
+
+    override_dependency(get_current_user, mocks.get_current_user(user))
+    override_dependency(oauth2_scheme, mocks.oauth2_scheme())
+
+    with open("tests/assets/test_upload.pdf", "rb") as f:
+        file_data = f.read()
+        response = client.post(
+            "/api/v1/upload",
+            files={"file": ("test_upload.pdf", file_data, "application/pdf")},
+        )
+
+    # check the s3 bucket for the document
+    assert response.status_code == 200, "Error message JSON: " + response.text  
+    data = response.json()
+    assert "key" in data
+    assert "url" in data
