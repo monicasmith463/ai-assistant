@@ -105,6 +105,11 @@ class EnvironmentOption(Enum):
 class EnvironmentSettings(BaseSettings):
     ENVIRONMENT: EnvironmentOption = config("ENVIRONMENT", default="local")
 
+class S3Settings(BaseSettings):
+    AWS_ACCESS_KEY_ID: str = config("AWS_ACCESS_KEY_ID")
+    AWS_SECRET_ACCESS_KEY: str = config("AWS_SECRET_ACCESS_KEY")
+    AWS_REGION: str = config("AWS_REGION", default="us-west-2")
+    S3_BUCKET_NAME: str = config("S3_BUCKET_NAME")
 
 class Settings(
     AppSettings,
@@ -118,6 +123,7 @@ class Settings(
     RedisRateLimiterSettings,
     DefaultRateLimitSettings,
     EnvironmentSettings,
+    S3Settings
 ):
     pass
 
