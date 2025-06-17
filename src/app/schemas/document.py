@@ -8,16 +8,17 @@ class DocumentBase(BaseModel):
     filename: str
     content_type: str
     size: int
-
+    s3_url: Optional[str] = None
 
 class DocumentCreate(BaseModel):
     filename: str
     content_type: str
     size: int
+    s3_url: Optional[str] = None
+
 
 class DocumentCreateInternal(DocumentCreate):
     created_by_user_id: int
-    s3_url: Optional[str] = None
 
 
 class DocumentRead(DocumentBase):
@@ -28,5 +29,7 @@ class DocumentRead(DocumentBase):
     updated_at: Optional[datetime]
     is_deleted: bool
 
-    class Config:
-        from_attributes = True
+class DocumentUpdate(DocumentBase):
+    pass
+
+
